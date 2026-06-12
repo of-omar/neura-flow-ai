@@ -1,0 +1,427 @@
+# NeuraFlow AI - Deployment Guide
+
+## Quick Start
+
+### Local Development
+```bash
+# Install dependencies
+pnpm install
+
+# Start dev server
+pnpm dev
+
+# Open in browser
+# Navigate to http://localhost:3000
+```
+
+### Production Build
+```bash
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## Deployment Platforms
+
+### 1. Vercel (Recommended)
+Vercel is the optimal choice for Next.js applications.
+
+#### Option A: Using Vercel CLI
+```bash
+# Install Vercel CLI
+pnpm add -g vercel
+
+# Deploy
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+#### Option B: GitHub Integration
+1. Push your code to GitHub
+2. Go to vercel.com and sign in
+3. Click "Add New Project"
+4. Select your repository
+5. Click "Deploy"
+
+#### Environment Variables
+Currently no environment variables are required. To add them later:
+1. Go to Project Settings → Environment Variables
+2. Add your variables
+
+### 2. AWS Amplify
+```bash
+# Install Amplify CLI
+npm install -g @aws-amplify/cli
+
+# Initialize project
+amplify init
+
+# Deploy
+amplify publish
+```
+
+### 3. Netlify
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Deploy
+netlify deploy --prod
+```
+
+### 4. Docker Container
+
+#### Create Dockerfile
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+
+# Copy project files
+COPY . .
+
+# Build
+RUN pnpm build
+
+# Expose port
+EXPOSE 3000
+
+# Start
+CMD ["pnpm", "start"]
+```
+
+#### Build and Run
+```bash
+# Build image
+docker build -t neuraflow-ai .
+
+# Run container
+docker run -p 3000:3000 neuraflow-ai
+```
+
+### 5. Self-Hosted Server (Ubuntu/Debian)
+
+#### Prerequisites
+- Node.js 18+
+- pnpm
+- Nginx (optional, for reverse proxy)
+- PM2 (for process management)
+
+#### Setup Steps
+```bash
+# SSH into server
+ssh user@your-server.com
+
+# Clone repository
+git clone <repo-url>
+cd neuraflow-ai
+
+# Install dependencies
+pnpm install
+
+# Build production bundle
+pnpm build
+
+# Install PM2 globally
+pnpm add -g pm2
+
+# Start application with PM2
+pm2 start pnpm --name "neuraflow-ai" -- start
+
+# Save PM2 configuration
+pm2 save
+
+# Setup PM2 to restart on reboot
+pm2 startup
+
+# View logs
+pm2 logs neuraflow-ai
+```
+
+#### Nginx Configuration
+```nginx
+server {
+    listen 80;
+    server_name neuraflow.ai;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+#### SSL with Let's Encrypt
+```bash
+# Install Certbot
+sudo apt-get install certbot python3-certbot-nginx
+
+# Generate certificate
+sudo certbot certonly --nginx -d neuraflow.ai
+
+# Configure auto-renewal
+sudo systemctl enable certbot.timer
+```
+
+## Environment Variables
+
+Create a `.env.local` file for local development:
+
+```env
+# API Configuration (optional)
+NEXT_PUBLIC_API_URL=https://api.neuraflow.ai
+
+# Analytics (optional)
+NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
+
+# Feature Flags (optional)
+NEXT_PUBLIC_ENABLE_ANALYTICS=true
+```
+
+## Performance Optimization
+
+### 1. Image Optimization
+The project uses Next.js Image component which automatically:
+- Serves optimized WebP format
+- Implements lazy loading
+- Generates responsive sizes
+
+### 2. Code Splitting
+Already configured in `next.config.mjs`:
+- Automatic code splitting by route
+- Dynamic imports for heavy components
+
+### 3. CSS Optimization
+Tailwind CSS v4:
+- PurgeCSS built-in
+- CSS cascade layers enabled
+- Minimal bundle size
+
+### 4. Caching Strategy
+```javascript
+// next.config.mjs
+const nextConfig = {
+  headers: async () => [
+    {
+      source: '/(.*)\\.(jpg|jpeg|png|gif|webp|svg|ico)$',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
+        },
+      ],
+    },
+  ],
+};
+```
+
+## Monitoring & Logging
+
+### Vercel Analytics
+Built-in with Vercel deployment:
+- Real User Monitoring (RUM)
+- Core Web Vitals
+- Performance metrics
+
+### Custom Analytics
+```typescript
+// Add to app/layout.tsx
+import { Analytics } from '@vercel/analytics/next';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  )
+}
+```
+
+## SEO Best Practices
+
+### 1. Metadata
+Already configured for:
+- Open Graph tags
+- Twitter Card tags
+- Canonical URLs
+- Structured data (ready for JSON-LD)
+
+### 2. Sitemap & Robots.txt
+- Dynamic sitemap: `/sitemap.xml`
+- Robots config: `/robots.txt`
+- Already generated by Next.js
+
+### 3. Performance for SEO
+- Server Components for faster rendering
+- Image optimization
+- Code splitting
+- Core Web Vitals optimized
+
+## API Integration
+
+To connect to a real backend, follow these steps:
+
+### 1. Update Service Files
+```typescript
+// services/features.service.ts
+async getAllFeatures(): Promise<ApiResponse<Feature[]>> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/features`
+    );
+    const data = await response.json();
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    return this.handleError(error, 'Failed to fetch features');
+  }
+}
+```
+
+### 2. Configure Environment Variables
+```env
+NEXT_PUBLIC_API_URL=https://api.your-domain.com
+```
+
+### 3. Update Types if Needed
+Ensure API response matches TypeScript interfaces in `lib/types.ts`
+
+## Database Integration
+
+### Option 1: Supabase
+```typescript
+// lib/api/supabase.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export default supabase;
+```
+
+### Option 2: Neon (PostgreSQL)
+```typescript
+// lib/api/database.ts
+import { sql } from '@vercel/postgres';
+
+export async function getFeatures() {
+  const result = await sql`SELECT * FROM features`;
+  return result.rows;
+}
+```
+
+## Troubleshooting
+
+### Build Failures
+```bash
+# Clear cache and rebuild
+rm -rf .next
+pnpm build
+```
+
+### Port Already in Use
+```bash
+# Use different port
+pnpm dev -p 3001
+```
+
+### Module Not Found
+```bash
+# Reinstall dependencies
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+### Dark Mode Not Working
+- Clear browser cache
+- Check localStorage for theme preference
+- Verify `next-themes` is properly installed
+
+## Performance Benchmarks
+
+### Target Metrics
+- **Lighthouse**: 90+
+- **LCP (Largest Contentful Paint)**: < 2.5s
+- **FID (First Input Delay)**: < 100ms
+- **CLS (Cumulative Layout Shift)**: < 0.1
+
+### Measure Performance
+```bash
+# Using Next.js built-in analyzer
+ANALYZE=true pnpm build
+
+# Using Lighthouse
+pnpm add -D @next/bundle-analyzer
+```
+
+## Updates & Maintenance
+
+### Regular Updates
+```bash
+# Update dependencies
+pnpm up --latest
+
+# Update Next.js specifically
+pnpm up next@latest
+
+# Run type check
+pnpm tsc --noEmit
+
+# Run linter
+pnpm lint
+```
+
+### Database Backups
+Configure automatic backups based on your database provider:
+- Supabase: Automatic daily backups
+- Neon: Built-in backup system
+- Self-hosted: Use backup tools like pg_dump
+
+## Security Checklist
+
+- ✅ Environment variables not committed to git
+- ✅ HTTPS enforced in production
+- ✅ Content Security Policy headers set
+- ✅ Input validation on forms
+- ✅ Rate limiting on API endpoints
+- ✅ Dependencies regularly updated
+- ✅ Security headers configured
+
+## Support & Resources
+
+- **Documentation**: https://nextjs.org/docs
+- **Vercel Docs**: https://vercel.com/docs
+- **Tailwind CSS**: https://tailwindcss.com/docs
+- **Framer Motion**: https://www.framer.com/motion/
+
+---
+
+Ready to deploy! 🚀
