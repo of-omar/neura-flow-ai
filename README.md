@@ -1,4 +1,5 @@
 # NeuraFlow AI - Enterprise Automation Platform
+🌐 Live Demo: https://neura-flow-ai.netlify.app
 
 A modern, enterprise-grade web application built with Next.js 16, showcasing an AI-powered workflow automation platform. This project demonstrates best practices in modern web development with a portfolio-ready design and interactive components.
 
@@ -10,6 +11,15 @@ A modern, enterprise-grade web application built with Next.js 16, showcasing an 
 - **Dark Mode Support**: Built-in dark/light mode toggle
 - **Performance Optimized**: Leveraging Next.js optimization strategies
 - **Accessible**: WCAG compliant with semantic HTML and ARIA labels
+
+- ## 📸 Screenshots
+
+> Add screenshots of your UI here
+
+- Home Page
+- Features Page
+- Pricing Page
+- Dark Mode
 
 ## Project Structure
 
@@ -121,6 +131,7 @@ A modern, enterprise-grade web application built with Next.js 16, showcasing an 
 - **Linting**: ESLint
 
 ## Getting Started
+git clone https://github.com/of-omar/neura-flow-ai.git
 
 ### Prerequisites
 - Node.js 18+
